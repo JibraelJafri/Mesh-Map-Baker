@@ -182,3 +182,15 @@ def check_executables():
     if not os.path.exists(RENDER_EXE):
         missing.append("sbsrender.exe")
     return missing
+
+
+def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, sampling_rate, ray_count, cleanup_temps, log_callback, progress_callback):
+    input_dir = clean_path(input_dir)
+    output_dir = clean_path(output_dir)
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    json_dir = clean_path(os.path.join(output_dir, "_bake_plans"))
+    if not os.path.exists(json_dir):
+        os.makedirs(json_dir)
