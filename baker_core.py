@@ -1,7 +1,9 @@
 import os
-import subprocess
-import math
 import json
+import subprocess
+import time
+import math
+import shutil
 
 # ======================================================================
 # CONFIGURATION
@@ -25,9 +27,9 @@ BASE_JSON = {
         "max_depth": 0.01,
         "max_height": 0.01,
         "mesh_match_mode": "match_all",
-        "normalized_distance": False,
+        "normalized_distance": True,
         "offset_map_path": "",
-        "sampling_rate": "2x2",
+        "sampling_rate": "2x2",  # Overridden by GUI
         "skew_correction": False,
         "skew_map_invert": False,
         "skew_map_path": "",
@@ -37,14 +39,20 @@ BASE_JSON = {
     },
     "bakers": [
         {
-            "baker": "Thickness.Raytraced",
-            "identifier": "thickness",
+            "baker": "AmbientOcclusion.Raytraced",
+            "identifier": "ambient_occlusion",
             "parameters": {
+                "attenuation": "linear",
                 "base.uv_set": "Value from Common/base.uv_set",
                 "cage_scene_path": "Value from CommonProjection/cage_scene_path",
+                "culling_mode": "never",
+                "enable_ground_plane": False,
+                "ground_offset": 0,
                 "high_scene_paths": "Value from CommonProjection/high_scene_paths",
                 "is_selected": True,
-                "maximize_range": "min_max",
+                "normal_map_orientation": "directx",
+                "normal_map_path": "",
+                "normal_map_space": "tangent_space",
                 "output_format": "Value from Common/output_format",
                 "output_name": "Value from Common/output_name",
                 "output_size": "Value from Common/output_size",
@@ -59,7 +67,7 @@ BASE_JSON = {
                 "projection.skew_map_invert": "Value from CommonProjection/skew_map_invert",
                 "projection.skew_map_path": "Value from CommonProjection/skew_map_path",
                 "projection.smooth_normals": "Value from CommonProjection/smooth_normals",
-                "secondary.max_distance": 0.1,
+                "secondary.max_distance": 1,
                 "secondary.mesh_match_mode": "match_all",
                 "secondary.min_distance": 0.00001,
                 "secondary.normalized_distance": False,
@@ -110,20 +118,14 @@ BASE_JSON = {
             },
         },
         {
-            "baker": "AmbientOcclusion.Raytraced",
-            "identifier": "ambient_occlusion",
+            "baker": "Thickness.Raytraced",
+            "identifier": "thickness",
             "parameters": {
-                "attenuation": "linear",
                 "base.uv_set": "Value from Common/base.uv_set",
                 "cage_scene_path": "Value from CommonProjection/cage_scene_path",
-                "culling_mode": "never",
-                "enable_ground_plane": False,
-                "ground_offset": 0,
                 "high_scene_paths": "Value from CommonProjection/high_scene_paths",
                 "is_selected": True,
-                "normal_map_orientation": "directx",
-                "normal_map_path": "",
-                "normal_map_space": "tangent_space",
+                "maximize_range": "min_max",
                 "output_format": "Value from Common/output_format",
                 "output_name": "Value from Common/output_name",
                 "output_size": "Value from Common/output_size",
@@ -138,7 +140,7 @@ BASE_JSON = {
                 "projection.skew_map_invert": "Value from CommonProjection/skew_map_invert",
                 "projection.skew_map_path": "Value from CommonProjection/skew_map_path",
                 "projection.smooth_normals": "Value from CommonProjection/smooth_normals",
-                "secondary.max_distance": 1,
+                "secondary.max_distance": 0.1,
                 "secondary.mesh_match_mode": "match_all",
                 "secondary.min_distance": 0.00001,
                 "secondary.normalized_distance": False,
@@ -168,7 +170,7 @@ BASE_JSON = {
 def clean_path(path_str):
     if not path_str:
         return ""
-    return os.path.abspath(path_str.strip()).replace("\\", "/")
+    return os.path.abspath(path_str.strip(" \"'")).replace("\\", "/")
 
 
 def get_log2_res(pixel_res):
@@ -185,8 +187,20 @@ def check_executables():
 
 
 def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, sampling_rate, ray_count, cleanup_temps, log_callback, progress_callback):
+    """
+    Main logic loop. Designed to be called by the GUI on a background thread.
+    """
     input_dir = clean_path(input_dir)
     output_dir = clean_path(output_dir)
+    sbsar_path = clean_path(sbsar_path)
+    log2_res = get_log2_res(resolution)
+
+    supported_extensions = (".fbx", ".obj", ".usd", ".usda", ".usdc", ".glb", ".gltf")
+    mesh_files = [f for f in os.listdir(input_dir) if f.lower().endswith(supported_extensions)]
+
+    if not mesh_files:
+        log_callback(f"[!] No 3D files found in {input_dir}")
+        return
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -195,17 +209,52 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
     if not os.path.exists(json_dir):
         os.makedirs(json_dir)
 
-    current_json = BASE_JSON.copy()
-    current_json["Common"]["output_size"] = [resolution, resolution]
-    current_json["Common"]["output_format"] = out_format
-    current_json["CommonProjection"]["sampling_rate"] = sampling_rate
-    for baker in current_json["bakers"]:
-        if "secondary.sample_count" in baker["parameters"]:
-            baker["parameters"]["secondary.sample_count"] = int(ray_count)
+    success_count = 0
+    start_time = time.time()
 
-    json_path = os.path.join(json_dir, "test_bake.json")
-    with open(json_path, "w") as f:
-        json.dump(current_json, f, indent=2)
+    log_callback(f"Found {len(mesh_files)} meshes. Starting pipeline...\n")
 
-    bake_cmd = [BAKER_EXE, "run", "--json", json_path]
-    subprocess.run(bake_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    for i, mesh_name in enumerate(mesh_files, 1):
+        mesh_base = os.path.splitext(mesh_name)[0]
+        mesh_path = clean_path(os.path.join(input_dir, mesh_name))
+
+        log_callback(f"[{i}/{len(mesh_files)}] Processing: {mesh_name}")
+        progress_callback(i - 1, len(mesh_files))
+
+        # --- BAKING ---
+        log_callback(f"  -> [Phase 1] Baking Textures ({sampling_rate} AA, {ray_count} Rays)...")
+
+        current_json = BASE_JSON.copy()
+
+        # Inject standard options
+        current_json["low_scene_path"] = mesh_path
+        current_json["output_path"] = output_dir
+        current_json["Common"]["output_size"] = [resolution, resolution]
+        current_json["Common"]["output_format"] = out_format
+
+        # Inject Power User options (AA and Rays)
+        current_json["CommonProjection"]["sampling_rate"] = sampling_rate
+        for baker in current_json["bakers"]:
+            if "secondary.sample_count" in baker["parameters"]:
+                baker["parameters"]["secondary.sample_count"] = int(ray_count)
+
+        json_path = os.path.join(json_dir, f"{mesh_base}_bake.json")
+        with open(json_path, "w") as f:
+            json.dump(current_json, f, indent=2)
+
+        bake_cmd = [BAKER_EXE, "run", "--json", json_path]
+
+        try:
+            subprocess.run(bake_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.decode("utf-8").strip() if e.stderr else "Unknown error"
+            log_callback(f"  [!] Bake failed. Code: {e.returncode}. {err_msg}")
+            continue
+
+        log_callback(f"  -> Bake finished for {mesh_base}")
+
+    elapsed = round(time.time() - start_time, 2)
+    progress_callback(len(mesh_files), len(mesh_files))
+    log_callback(f"\nPIPELINE COMPLETE! ({success_count}/{len(mesh_files)} successful)")
+    log_callback(f"Time elapsed: {elapsed} seconds")
+    log_callback(f"Final output: {output_dir}")
