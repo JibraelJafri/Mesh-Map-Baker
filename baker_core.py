@@ -194,3 +194,18 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
     json_dir = clean_path(os.path.join(output_dir, "_bake_plans"))
     if not os.path.exists(json_dir):
         os.makedirs(json_dir)
+
+    current_json = BASE_JSON.copy()
+    current_json["Common"]["output_size"] = [resolution, resolution]
+    current_json["Common"]["output_format"] = out_format
+    current_json["CommonProjection"]["sampling_rate"] = sampling_rate
+    for baker in current_json["bakers"]:
+        if "secondary.sample_count" in baker["parameters"]:
+            baker["parameters"]["secondary.sample_count"] = int(ray_count)
+
+    json_path = os.path.join(json_dir, "test_bake.json")
+    with open(json_path, "w") as f:
+        json.dump(current_json, f, indent=2)
+
+    bake_cmd = [BAKER_EXE, "run", "--json", json_path]
+    subprocess.run(bake_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
