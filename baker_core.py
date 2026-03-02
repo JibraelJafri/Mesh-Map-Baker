@@ -170,7 +170,7 @@ BASE_JSON = {
 def clean_path(path_str):
     if not path_str:
         return ""
-    return os.path.abspath(path_str.strip(" \"'")).replace("\\", "/")
+    return os.path.abspath(path_str.strip()).replace("\\", "/")
 
 
 def get_log2_res(pixel_res):
@@ -247,14 +247,67 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
         try:
             subprocess.run(bake_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            err_msg = e.stderr.decode("utf-8").strip() if e.stderr else "Unknown error"
+            err_msg = str(e)
             log_callback(f"  [!] Bake failed. Code: {e.returncode}. {err_msg}")
             continue
 
-        log_callback(f"  -> Bake finished for {mesh_base}")
+        # --- PACKING ---
+        log_callback("  -> [Phase 2] Packing via SBSAR...")
 
+        ao_file = os.path.join(output_dir, f"{mesh_base}_ambient_occlusion.{out_format}")
+        curv_file = os.path.join(output_dir, f"{mesh_base}_curvature.{out_format}")
+        thick_file = os.path.join(output_dir, f"{mesh_base}_thickness.{out_format}")
+
+        if not all(os.path.exists(f) for f in [ao_file, curv_file, thick_file]):
+            log_callback(f"  [!] Missing baked textures! Skipping packing for {mesh_base}.")
+            continue
+
+        render_cmd = [
+            RENDER_EXE,
+            "render",
+            "--input",
+            sbsar_path,
+            "--no-report",
+            "--output-name",
+            f"OCT_{mesh_base}",
+            "--output-path",
+            output_dir,
+            "--output-format",
+            out_format,
+            "--set-value",
+            f"$outputsize@{log2_res},{log2_res}",
+            "--set-entry",
+            f"occlusion@{ao_file}",
+            "--set-entry",
+            f"curvature@{curv_file}",
+            "--set-entry",
+            f"thickness@{thick_file}",
+        ]
+
+        try:
+            subprocess.run(render_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            log_callback(f"  -> [SUCCESS] Created: OCT_{mesh_base}.{out_format}")
+            success_count += 1
+
+            pass
+            # --- HOUSEKEEPING ---
+            if cleanup_temps:
+                log_callback("  -> [Phase 3] Cleaning up temp files...")
+                for temp_file in [ao_file, curv_file, thick_file]:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+
+        except subprocess.CalledProcessError as e:
+            err_msg = str(e)
+            log_callback(f"  [!] Packing failed. Code: {e.returncode}. {err_msg}")
+
+        log_callback("-" * 40)
+
+    # Final Folder Housekeeping
+
+    # End summary
     elapsed = round(time.time() - start_time, 2)
-    progress_callback(len(mesh_files), len(mesh_files))
+    progress_callback(len(mesh_files), len(mesh_files))  # Fill progress bar
     log_callback(f"\nPIPELINE COMPLETE! ({success_count}/{len(mesh_files)} successful)")
     log_callback(f"Time elapsed: {elapsed} seconds")
     log_callback(f"Final output: {output_dir}")
