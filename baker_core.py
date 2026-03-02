@@ -289,7 +289,6 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
             log_callback(f"  -> [SUCCESS] Created: OCT_{mesh_base}.{out_format}")
             success_count += 1
 
-            pass
             # --- HOUSEKEEPING ---
             if cleanup_temps:
                 log_callback("  -> [Phase 3] Cleaning up temp files...")
@@ -304,6 +303,8 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
         log_callback("-" * 40)
 
     # Final Folder Housekeeping
+    if cleanup_temps and os.path.exists(json_dir):
+        shutil.rmtree(json_dir)
 
     # End summary
     elapsed = round(time.time() - start_time, 2)
