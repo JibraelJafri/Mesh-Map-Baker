@@ -170,7 +170,7 @@ BASE_JSON = {
 def clean_path(path_str):
     if not path_str:
         return ""
-    return os.path.abspath(path_str.strip()).replace("\\", "/")
+    return os.path.abspath(path_str.strip(" \"'")).replace("\\", "/")
 
 
 def get_log2_res(pixel_res):
