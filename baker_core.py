@@ -247,7 +247,7 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
         try:
             subprocess.run(bake_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            err_msg = str(e)
+            err_msg = e.stderr.decode("utf-8").strip() if e.stderr else "Unknown error"
             log_callback(f"  [!] Bake failed. Code: {e.returncode}. {err_msg}")
             continue
 
@@ -297,7 +297,7 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
                         os.remove(temp_file)
 
         except subprocess.CalledProcessError as e:
-            err_msg = str(e)
+            err_msg = e.stderr.decode("utf-8").strip() if e.stderr else "Unknown error"
             log_callback(f"  [!] Packing failed. Code: {e.returncode}. {err_msg}")
 
         log_callback("-" * 40)
