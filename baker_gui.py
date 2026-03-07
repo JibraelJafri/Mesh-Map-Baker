@@ -173,6 +173,8 @@ class AutoBakerApp:
             messagebox.showwarning("Missing Data", "Please select a valid SBSAR packer file.")
             return
 
+        # Lock UI
+        self.btn_start.config(state=tk.DISABLED, text="PROCESSING...")
         self.txt_log.config(state=tk.NORMAL)
         self.txt_log.delete(1.0, tk.END)
         self.txt_log.config(state=tk.DISABLED)
@@ -201,6 +203,8 @@ class AutoBakerApp:
             baker_core.run_pipeline(**kwargs)
         except Exception as e:
             self.log(f"\n[FATAL ERROR] {str(e)}")
+        finally:
+            self.root.after(0, self._reset_ui)
 
     def _reset_ui(self):
         self.btn_start.config(state=tk.NORMAL, text="START PIPELINE")
