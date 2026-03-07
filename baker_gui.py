@@ -70,6 +70,17 @@ class AutoBakerApp:
         )
         fmt_combo.grid(row=0, column=3, sticky="w", padx=10)
 
+        # Row 2: Baking Quality
+        ttk.Label(settings_frame, text="Antialiasing:").grid(row=1, column=0, sticky="w", pady=5)
+        self.var_aa = tk.StringVar(value="2x2")
+        aa_combo = ttk.Combobox(settings_frame, textvariable=self.var_aa, values=["1x1", "2x2", "4x4", "8x8"], width=10, state="readonly")
+        aa_combo.grid(row=1, column=1, sticky="w", padx=10)
+
+        ttk.Label(settings_frame, text="Ray Count:").grid(row=1, column=2, sticky="w", padx=(15, 0))
+        self.var_rays = tk.StringVar(value="256")
+        rays_combo = ttk.Combobox(settings_frame, textvariable=self.var_rays, values=["16", "32", "64", "128", "256"], width=10, state="readonly")
+        rays_combo.grid(row=1, column=3, sticky="w", padx=10)
+
         
 
     def browse_folder(self, string_var):
