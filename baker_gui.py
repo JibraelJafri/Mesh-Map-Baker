@@ -81,7 +81,58 @@ class AutoBakerApp:
         rays_combo = ttk.Combobox(settings_frame, textvariable=self.var_rays, values=["16", "32", "64", "128", "256"], width=10, state="readonly")
         rays_combo.grid(row=1, column=3, sticky="w", padx=10)
 
-        
+        # Row 3: Housekeeping
+        self.var_cleanup = tk.BooleanVar(value=True)
+        ttk.Checkbutton(settings_frame, text="Clean up intermediate maps (Housekeeping)", variable=self.var_cleanup).grid(
+            row=2, column=0, columnspan=4, sticky="w", pady=(10, 0)
+        )
+
+        # --- SECTION 3: LOG & PROGRESS ---
+        log_frame = ttk.LabelFrame(main_frame, text=" Console Log ", padding=10)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+
+        self.txt_log = scrolledtext.ScrolledText(
+            log_frame, wrap=tk.WORD, width=40, height=10, state=tk.DISABLED, bg="#1e1e1e", fg="#d4d4d4", font=("Consolas", 9)
+        )
+        self.txt_log.pack(fill=tk.BOTH, expand=True)
+
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(main_frame, variable=self.progress_var, maximum=100)
+        self.progress_bar.pack(fill=tk.X, pady=(0, 10))
+
+        # --- CONTROLS ---
+        self.btn_start = ttk.Button(main_frame, text="START PIPELINE", command=self.start_pipeline)
+        self.btn_start.pack(fill=tk.X, ipady=5)
+
+    def on_input_dir_change(self, *args):
+        """Automatically fills the output directory when the input directory is modified."""
+        in_dir = self.var_input_dir.get().strip(" \"'")  # Remove quotes if user dragged & dropped
+        if in_dir:
+            # Clean slashes and build the Mesh_Maps path
+            clean_in = os.path.abspath(in_dir).replace("\\", "/")
+            auto_out = f"{clean_in}/Mesh_Maps"
+
+            # Only overwrite the output box if it's currently empty,
+            # OR if it already ends in "Mesh_Maps" (meaning it was previously auto-filled)
+            current_out = self.var_output_dir.get().strip()
+            if not current_out or current_out.endswith("Mesh_Maps"):
+                self.var_output_dir.set(auto_out)
+
+    def find_default_sbsar(self):
+        """Scans the directory where this python file lives for an SBSAR."""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Prioritize the exact name if it exists
+        exact_match = os.path.join(script_dir, "Mesh_Maps_Packer.sbsar")
+        if os.path.exists(exact_match):
+            return exact_match
+
+        # Fallback: Just grab the first .sbsar it finds
+        sbsar_files = glob.glob(os.path.join(script_dir, "*.sbsar"))
+        if sbsar_files:
+            return sbsar_files[0]
+
+        return ""  # Found nothing
 
     def browse_folder(self, string_var):
         folder = filedialog.askdirectory()
@@ -92,6 +143,15 @@ class AutoBakerApp:
         file = filedialog.askopenfilename(filetypes=[("Substance Archive", "*.sbsar")])
         if file:
             self.var_sbsar.set(file)
+
+    def log(self, message):
+        pass
+
+    def update_progress(self, current, total):
+        pass
+
+    def start_pipeline(self):
+        pass
 
     def on_input_dir_change(self, *args):
         pass
@@ -105,6 +165,16 @@ class AutoBakerApp:
         if sbsar_files:
             return sbsar_files[0]
         return ""
+
+    def browse_folder(self, string_var):
+        folder = filedialog.askdirectory()
+        if folder:
+            string_var.set(folder)
+
+    def browse_sbsar(self):
+        file = filedialog.askopenfilename(filetypes=[("Substance Archive", "*.sbsar")])
+        if file:
+            self.var_sbsar.set(file)
 
 
 if __name__ == "__main__":
