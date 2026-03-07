@@ -23,7 +23,7 @@ class AutoBakerApp:
         self.create_widgets()
 
     def create_widgets(self):
-        main_frame = ttk.Frame(self.root, padding=15)
+        main_frame = ttk.Frame(self.root, padding=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # --- SECTION 1: PATHS ---
@@ -213,7 +213,10 @@ class AutoBakerApp:
 if __name__ == "__main__":
     root = tk.Tk()
 
-
+    try:
+        root.tk.call("sv_ttk", "set_theme", "dark")
+    except:
+        pass
 
     app = AutoBakerApp(root)
     root.mainloop()
