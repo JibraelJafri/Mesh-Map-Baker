@@ -51,6 +51,27 @@ class AutoBakerApp:
         ttk.Entry(path_frame, textvariable=self.var_sbsar, width=60).grid(row=2, column=1, padx=5, pady=2)
         ttk.Button(path_frame, text="Browse", command=self.browse_sbsar).grid(row=2, column=2, pady=2)
 
+        # --- SECTION 2: SETTINGS ---
+        settings_frame = ttk.LabelFrame(main_frame, text=" Output & Quality Settings ", padding=10)
+        settings_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # Row 1: Output Formats
+        ttk.Label(settings_frame, text="Resolution:").grid(row=0, column=0, sticky="w", pady=5)
+        self.var_res = tk.StringVar(value="2048")
+        res_combo = ttk.Combobox(
+            settings_frame, textvariable=self.var_res, values=["512", "1024", "2048", "4096", "8192"], width=10, state="readonly"
+        )
+        res_combo.grid(row=0, column=1, sticky="w", padx=10)
+
+        ttk.Label(settings_frame, text="Image Format:").grid(row=0, column=2, sticky="w", padx=(15, 0))
+        self.var_format = tk.StringVar(value="png")
+        fmt_combo = ttk.Combobox(
+            settings_frame, textvariable=self.var_format, values=["png", "tiff", "exr", "jpeg", "tga"], width=10, state="readonly"
+        )
+        fmt_combo.grid(row=0, column=3, sticky="w", padx=10)
+
+        
+
     def browse_folder(self, string_var):
         folder = filedialog.askdirectory()
         if folder:
