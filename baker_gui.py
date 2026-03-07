@@ -65,6 +65,13 @@ class AutoBakerApp:
         pass
 
     def find_default_sbsar(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        exact_match = os.path.join(script_dir, "Mesh_Maps_Packer.sbsar")
+        if os.path.exists(exact_match):
+            return exact_match
+        sbsar_files = glob.glob(os.path.join(script_dir, "*.sbsar"))
+        if sbsar_files:
+            return sbsar_files[0]
         return ""
 
 
