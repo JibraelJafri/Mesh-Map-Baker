@@ -160,10 +160,56 @@ class AutoBakerApp:
         self.root.after(0, self.progress_var.set, percentage)
 
     def start_pipeline(self):
-        pass
+        # Clean paths (removes quotes if user dragged/dropped into the box)
+        in_dir = self.var_input_dir.get().strip(" \"'")
+        out_dir = self.var_output_dir.get().strip(" \"'")
+        sbsar = self.var_sbsar.get().strip(" \"'")
+
+        # Validate inputs
+        if not in_dir or not os.path.exists(in_dir):
+            messagebox.showwarning("Missing Data", "Please select a valid Meshes folder.")
+            return
+        if not sbsar or not os.path.exists(sbsar):
+            messagebox.showwarning("Missing Data", "Please select a valid SBSAR packer file.")
+            return
+
+        self.txt_log.config(state=tk.NORMAL)
+        self.txt_log.delete(1.0, tk.END)
+        self.txt_log.config(state=tk.DISABLED)
+        self.progress_var.set(0)
+
+        # Gather arguments
+        kwargs = {
+            "input_dir": in_dir,
+            "output_dir": out_dir,
+            "sbsar_path": sbsar,
+            "resolution": int(self.var_res.get()),
+            "out_format": self.var_format.get(),
+            "sampling_rate": self.var_aa.get(),
+            "ray_count": self.var_rays.get(),
+            "cleanup_temps": self.var_cleanup.get(),
+            "log_callback": self.log,
+            "progress_callback": self.update_progress,
+        }
+
+        # Run backend in a separate thread so GUI doesn't freeze
+        thread = threading.Thread(target=self._run_backend_thread, kwargs=kwargs, daemon=True)
+        thread.start()
+
+    def _run_backend_thread(self, **kwargs):
+        try:
+            baker_core.run_pipeline(**kwargs)
+        except Exception as e:
+            self.log(f"\n[FATAL ERROR] {str(e)}")
+
+    def _reset_ui(self):
+        self.btn_start.config(state=tk.NORMAL, text="START PIPELINE")
 
 
 if __name__ == "__main__":
     root = tk.Tk()
+
+
+
     app = AutoBakerApp(root)
     root.mainloop()
