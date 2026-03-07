@@ -145,36 +145,22 @@ class AutoBakerApp:
             self.var_sbsar.set(file)
 
     def log(self, message):
-        pass
+        """Thread-safe way to write to the GUI text box."""
+        self.root.after(0, self._log_insert, message)
+
+    def _log_insert(self, message):
+        self.txt_log.config(state=tk.NORMAL)
+        self.txt_log.insert(tk.END, message + "\n")
+        self.txt_log.see(tk.END)
+        self.txt_log.config(state=tk.DISABLED)
 
     def update_progress(self, current, total):
-        pass
+        """Thread-safe way to update the progress bar."""
+        percentage = (current / total) * 100 if total > 0 else 0
+        self.root.after(0, self.progress_var.set, percentage)
 
     def start_pipeline(self):
         pass
-
-    def on_input_dir_change(self, *args):
-        pass
-
-    def find_default_sbsar(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        exact_match = os.path.join(script_dir, "Mesh_Maps_Packer.sbsar")
-        if os.path.exists(exact_match):
-            return exact_match
-        sbsar_files = glob.glob(os.path.join(script_dir, "*.sbsar"))
-        if sbsar_files:
-            return sbsar_files[0]
-        return ""
-
-    def browse_folder(self, string_var):
-        folder = filedialog.askdirectory()
-        if folder:
-            string_var.set(folder)
-
-    def browse_sbsar(self):
-        file = filedialog.askopenfilename(filetypes=[("Substance Archive", "*.sbsar")])
-        if file:
-            self.var_sbsar.set(file)
 
 
 if __name__ == "__main__":
