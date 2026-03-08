@@ -23,7 +23,7 @@ class AutoBakerApp:
         self.create_widgets()
 
     def create_widgets(self):
-        main_frame = ttk.Frame(self.root, padding=10)
+        main_frame = ttk.Frame(self.root, padding=15)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # --- SECTION 1: PATHS ---
