@@ -11,6 +11,7 @@ import shutil
 BAKER_EXE = r"D:\Program Files\Adobe Substance 3D Designer\substance3d_baker.exe"
 RENDER_EXE = r"D:\Program Files\Adobe Substance 3D Designer\sbsrender.exe"
 
+# Updated with the new Color.Raytraced baker
 BASE_JSON = {
     "Common": {
         "base.uv_set": 0,
@@ -29,7 +30,7 @@ BASE_JSON = {
         "mesh_match_mode": "match_all",
         "normalized_distance": True,
         "offset_map_path": "",
-        "sampling_rate": "2x2",  # Overridden by GUI
+        "sampling_rate": "2x2",
         "skew_correction": False,
         "skew_map_invert": False,
         "skew_map_path": "",
@@ -186,20 +187,18 @@ def check_executables():
     return missing
 
 
-def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, sampling_rate, ray_count, cleanup_temps, log_callback, progress_callback):
+def run_pipeline(
+    input_files, output_dir, sbsar_path, resolution, out_format, sampling_rate, ray_count, cleanup_temps, log_callback, progress_callback
+):
     """
-    Main logic loop. Designed to be called by the GUI on a background thread.
+    Main logic loop. Now accepts a specific list of file paths.
     """
-    input_dir = clean_path(input_dir)
     output_dir = clean_path(output_dir)
     sbsar_path = clean_path(sbsar_path)
     log2_res = get_log2_res(resolution)
 
-    supported_extensions = (".fbx", ".obj", ".usd", ".usda", ".usdc", ".glb", ".gltf")
-    mesh_files = [f for f in os.listdir(input_dir) if f.lower().endswith(supported_extensions)]
-
-    if not mesh_files:
-        log_callback(f"[!] No 3D files found in {input_dir}")
+    if not input_files:
+        log_callback(f"[!] No valid 3D files provided.")
         return
 
     if not os.path.exists(output_dir):
@@ -212,14 +211,15 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
     success_count = 0
     start_time = time.time()
 
-    log_callback(f"Found {len(mesh_files)} meshes. Starting pipeline...\n")
+    log_callback(f"Queued {len(input_files)} meshes. Starting pipeline...\n")
 
-    for i, mesh_name in enumerate(mesh_files, 1):
+    for i, mesh_path in enumerate(input_files, 1):
+        mesh_path = clean_path(mesh_path)
+        mesh_name = os.path.basename(mesh_path)
         mesh_base = os.path.splitext(mesh_name)[0]
-        mesh_path = clean_path(os.path.join(input_dir, mesh_name))
 
-        log_callback(f"[{i}/{len(mesh_files)}] Processing: {mesh_name}")
-        progress_callback(i - 1, len(mesh_files))
+        log_callback(f"[{i}/{len(input_files)}] Processing: {mesh_name}")
+        progress_callback(i - 1, len(input_files))
 
         # --- BAKING ---
         log_callback(f"  -> [Phase 1] Baking Textures ({sampling_rate} AA, {ray_count} Rays)...")
@@ -257,7 +257,6 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
         ao_file = os.path.join(output_dir, f"{mesh_base}_ambient_occlusion.{out_format}")
         curv_file = os.path.join(output_dir, f"{mesh_base}_curvature.{out_format}")
         thick_file = os.path.join(output_dir, f"{mesh_base}_thickness.{out_format}")
-
         if not all(os.path.exists(f) for f in [ao_file, curv_file, thick_file]):
             log_callback(f"  [!] Missing baked textures! Skipping packing for {mesh_base}.")
             continue
@@ -291,7 +290,7 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
 
             # --- HOUSEKEEPING ---
             if cleanup_temps:
-                log_callback("  -> [Phase 3] Cleaning up temp files...")
+                log_callback("  -> [Phase 3] Cleaning up temp maps...")
                 for temp_file in [ao_file, curv_file, thick_file]:
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
@@ -308,7 +307,7 @@ def run_pipeline(input_dir, output_dir, sbsar_path, resolution, out_format, samp
 
     # End summary
     elapsed = round(time.time() - start_time, 2)
-    progress_callback(len(mesh_files), len(mesh_files))  # Fill progress bar
-    log_callback(f"\nPIPELINE COMPLETE! ({success_count}/{len(mesh_files)} successful)")
+    progress_callback(len(input_files), len(input_files))  # Fill progress bar
+    log_callback(f"\nPIPELINE COMPLETE! ({success_count}/{len(input_files)} successful)")
     log_callback(f"Time elapsed: {elapsed} seconds")
     log_callback(f"Final output: {output_dir}")
