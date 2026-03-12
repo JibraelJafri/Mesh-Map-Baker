@@ -104,7 +104,14 @@ class AutoBakerApp:
         self.btn_start.pack(fill=tk.X, ipady=5)
 
     def on_input_files_change(self, *args):
-        pass
+        in_str = self.var_input_files.get().strip()
+        if in_str:
+            first_path = in_str.split(";")[0].strip(" \"'")
+            if first_path and os.path.exists(first_path):
+                target_dir = first_path if os.path.isdir(first_path) else os.path.dirname(first_path)
+                target_dir = target_dir.replace("\\", "/")
+                auto_out = f"{target_dir}/Mesh_Maps"
+                self.var_output_dir.set(auto_out)
 
     def find_default_sbsar(self):
         """Scans the directory where this python file lives for an SBSAR."""
