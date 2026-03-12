@@ -10,7 +10,7 @@ class AutoBakerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Substance 3D Auto-Baker & Packer (Pro)")
-        self.root.geometry("680x700")
+        self.root.geometry("680x700+50+50")
         self.root.resizable(False, False)
 
         # Check Executables
@@ -44,7 +44,7 @@ class AutoBakerApp:
         ttk.Entry(path_frame, textvariable=self.var_output_dir, width=60).grid(row=1, column=1, padx=5, pady=2)
         ttk.Button(path_frame, text="Browse", command=self.browse_output_folder).grid(row=1, column=2, pady=2)
 
-        # SBSAR File (Auto-Detect logic applied here)
+        # SBSAR File (Auto-Detect logic)
         ttk.Label(path_frame, text="Packer SBSAR:").grid(row=2, column=0, sticky="w", pady=2)
         self.var_sbsar = tk.StringVar(value=self.find_default_sbsar())
         ttk.Entry(path_frame, textvariable=self.var_sbsar, width=60).grid(row=2, column=1, padx=5, pady=2)
@@ -104,36 +104,41 @@ class AutoBakerApp:
         self.btn_start.pack(fill=tk.X, ipady=5)
 
     def on_input_files_change(self, *args):
+        """Automatically fills the output directory based on the location of the first selected mesh."""
         in_str = self.var_input_files.get().strip()
         if in_str:
+            # Grab the first path from the semicolon separated list
             first_path = in_str.split(";")[0].strip(" \"'")
+
+            # If it's a valid path, extract its folder
             if first_path and os.path.exists(first_path):
+                # If they pasted a folder, use it. If they pasted a file, get the parent folder.
                 target_dir = first_path if os.path.isdir(first_path) else os.path.dirname(first_path)
                 target_dir = target_dir.replace("\\", "/")
+
                 auto_out = f"{target_dir}/Mesh_Maps"
-                self.var_output_dir.set(auto_out)
+
+                # Only overwrite the output box if it's currently empty or already auto-filled
+                current_out = self.var_output_dir.get().strip()
+                if not current_out or current_out.endswith("Mesh_Maps"):
+                    self.var_output_dir.set(auto_out)
 
     def find_default_sbsar(self):
-        """Scans the directory where this python file lives for an SBSAR."""
         script_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # Prioritize the exact name if it exists
         exact_match = os.path.join(script_dir, "Mesh_Maps_Packer.sbsar")
         if os.path.exists(exact_match):
             return exact_match
 
-        # Fallback: Just grab the first .sbsar it finds
         sbsar_files = glob.glob(os.path.join(script_dir, "*.sbsar"))
-        if sbsar_files:
-            return sbsar_files[0]
-
-        return ""  # Found nothing
+        return sbsar_files[0] if sbsar_files else ""
 
     def browse_files(self):
+        """Allows user to multi-select specific mesh files."""
         files = filedialog.askopenfilenames(
             title="Select Meshes", filetypes=[("3D Meshes", "*.fbx *.obj *.usd *.usda *.usdc *.glb *.gltf"), ("All Files", "*.*")]
         )
         if files:
+            # Join the tuple with semicolons so it looks clean in the text box
             self.var_input_files.set("; ".join(files))
 
     def browse_output_folder(self):
@@ -147,7 +152,6 @@ class AutoBakerApp:
             self.var_sbsar.set(file)
 
     def log(self, message):
-        """Thread-safe way to write to the GUI text box."""
         self.root.after(0, self._log_insert, message)
 
     def _log_insert(self, message):
@@ -157,7 +161,6 @@ class AutoBakerApp:
         self.txt_log.config(state=tk.DISABLED)
 
     def update_progress(self, current, total):
-        """Thread-safe way to update the progress bar."""
         percentage = (current / total) * 100 if total > 0 else 0
         self.root.after(0, self.progress_var.set, percentage)
 
@@ -173,13 +176,16 @@ class AutoBakerApp:
             messagebox.showwarning("Missing Data", "Please select a valid SBSAR packer file.")
             return
 
+        # Smart Input Parser: Handles specific files AND entire directories seamlessly
         raw_paths = [p.strip(" \"'") for p in in_str.split(";") if p.strip(" \"'")]
         final_files = []
         supported = (".fbx", ".obj", ".usd", ".usda", ".usdc", ".glb", ".gltf")
+
         for p in raw_paths:
             if os.path.isfile(p) and p.lower().endswith(supported):
                 final_files.append(p)
             elif os.path.isdir(p):
+                # If they dragged a whole folder, unpack it for them
                 for f in os.listdir(p):
                     if f.lower().endswith(supported):
                         final_files.append(os.path.join(p, f))
