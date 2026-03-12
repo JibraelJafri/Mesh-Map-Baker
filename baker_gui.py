@@ -155,17 +155,30 @@ class AutoBakerApp:
         self.root.after(0, self.progress_var.set, percentage)
 
     def start_pipeline(self):
-        # Clean paths (removes quotes if user dragged/dropped into the box)
-        in_dir = self.var_input_dir.get().strip(" \"'")
+        in_str = self.var_input_files.get().strip()
         out_dir = self.var_output_dir.get().strip(" \"'")
         sbsar = self.var_sbsar.get().strip(" \"'")
 
-        # Validate inputs
-        if not in_dir or not os.path.exists(in_dir):
-            messagebox.showwarning("Missing Data", "Please select a valid Meshes folder.")
+        if not in_str:
+            messagebox.showwarning("Missing Data", "Please select at least one mesh or folder.")
             return
         if not sbsar or not os.path.exists(sbsar):
             messagebox.showwarning("Missing Data", "Please select a valid SBSAR packer file.")
+            return
+
+        raw_paths = [p.strip(" \"'") for p in in_str.split(";") if p.strip(" \"'")]
+        final_files = []
+        supported = (".fbx", ".obj", ".usd", ".usda", ".usdc", ".glb", ".gltf")
+        for p in raw_paths:
+            if os.path.isfile(p) and p.lower().endswith(supported):
+                final_files.append(p)
+            elif os.path.isdir(p):
+                for f in os.listdir(p):
+                    if f.lower().endswith(supported):
+                        final_files.append(os.path.join(p, f))
+
+        if not final_files:
+            messagebox.showwarning("No Meshes Found", "Could not find any valid 3D files in the input box.")
             return
 
         # Lock UI
@@ -177,7 +190,7 @@ class AutoBakerApp:
 
         # Gather arguments
         kwargs = {
-            "input_dir": in_dir,
+            "input_files": final_files,
             "output_dir": out_dir,
             "sbsar_path": sbsar,
             "resolution": int(self.var_res.get()),
