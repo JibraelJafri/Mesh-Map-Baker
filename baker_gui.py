@@ -30,20 +30,19 @@ class AutoBakerApp:
         path_frame = ttk.LabelFrame(main_frame, text=" File Paths ", padding=10)
         path_frame.pack(fill=tk.X, pady=(0, 10))
 
-        # Input Dir
-        ttk.Label(path_frame, text="Meshes Folder:").grid(row=0, column=0, sticky="w", pady=2)
-        self.var_input_dir = tk.StringVar()
-        # Add a trace so that whenever this box changes (pasting, typing, or browsing), it triggers the auto-fill
-        self.var_input_dir.trace_add("write", self.on_input_dir_change)
+        # Selected Meshes (Now handles specific files)
+        ttk.Label(path_frame, text="Selected Meshes:").grid(row=0, column=0, sticky="w", pady=2)
+        self.var_input_files = tk.StringVar()
+        self.var_input_files.trace_add("write", self.on_input_files_change)
 
-        ttk.Entry(path_frame, textvariable=self.var_input_dir, width=60).grid(row=0, column=1, padx=5, pady=2)
-        ttk.Button(path_frame, text="Browse", command=lambda: self.browse_folder(self.var_input_dir)).grid(row=0, column=2, pady=2)
+        ttk.Entry(path_frame, textvariable=self.var_input_files, width=60).grid(row=0, column=1, padx=5, pady=2)
+        ttk.Button(path_frame, text="Browse", command=self.browse_files).grid(row=0, column=2, pady=2)
 
         # Output Dir
         ttk.Label(path_frame, text="Output Folder:").grid(row=1, column=0, sticky="w", pady=2)
         self.var_output_dir = tk.StringVar()
         ttk.Entry(path_frame, textvariable=self.var_output_dir, width=60).grid(row=1, column=1, padx=5, pady=2)
-        ttk.Button(path_frame, text="Browse", command=lambda: self.browse_folder(self.var_output_dir)).grid(row=1, column=2, pady=2)
+        ttk.Button(path_frame, text="Browse", command=self.browse_output_folder).grid(row=1, column=2, pady=2)
 
         # SBSAR File (Auto-Detect logic applied here)
         ttk.Label(path_frame, text="Packer SBSAR:").grid(row=2, column=0, sticky="w", pady=2)
@@ -104,19 +103,8 @@ class AutoBakerApp:
         self.btn_start = ttk.Button(main_frame, text="START PIPELINE", command=self.start_pipeline)
         self.btn_start.pack(fill=tk.X, ipady=5)
 
-    def on_input_dir_change(self, *args):
-        """Automatically fills the output directory when the input directory is modified."""
-        in_dir = self.var_input_dir.get().strip(" \"'")  # Remove quotes if user dragged & dropped
-        if in_dir:
-            # Clean slashes and build the Mesh_Maps path
-            clean_in = os.path.abspath(in_dir).replace("\\", "/")
-            auto_out = f"{clean_in}/Mesh_Maps"
-
-            # Only overwrite the output box if it's currently empty,
-            # OR if it already ends in "Mesh_Maps" (meaning it was previously auto-filled)
-            current_out = self.var_output_dir.get().strip()
-            if not current_out or current_out.endswith("Mesh_Maps"):
-                self.var_output_dir.set(auto_out)
+    def on_input_files_change(self, *args):
+        pass
 
     def find_default_sbsar(self):
         """Scans the directory where this python file lives for an SBSAR."""
@@ -134,10 +122,17 @@ class AutoBakerApp:
 
         return ""  # Found nothing
 
-    def browse_folder(self, string_var):
-        folder = filedialog.askdirectory()
+    def browse_files(self):
+        files = filedialog.askopenfilenames(
+            title="Select Meshes", filetypes=[("3D Meshes", "*.fbx *.obj *.usd *.usda *.usdc *.glb *.gltf"), ("All Files", "*.*")]
+        )
+        if files:
+            self.var_input_files.set("; ".join(files))
+
+    def browse_output_folder(self):
+        folder = filedialog.askdirectory(title="Select Output Folder")
         if folder:
-            string_var.set(folder)
+            self.var_output_dir.set(folder)
 
     def browse_sbsar(self):
         file = filedialog.askopenfilename(filetypes=[("Substance Archive", "*.sbsar")])
