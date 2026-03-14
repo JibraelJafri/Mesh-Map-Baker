@@ -289,7 +289,7 @@ def run_pipeline(
         thick_file = os.path.join(output_dir, f"{mesh_base}_thickness.{out_format}")
         color_file = os.path.join(output_dir, f"{mesh_base}_color.{out_format}")
 
-        if not all(os.path.exists(f) for f in [ao_file, curv_file, thick_file]):
+        if not all(os.path.exists(f) for f in [ao_file, curv_file, thick_file, color_file]):
             log_callback(f"  [!] Missing baked textures! Skipping packing for {mesh_base}.")
             continue
 
@@ -313,6 +313,9 @@ def run_pipeline(
             f"curvature@{curv_file}",
             "--set-entry",
             f"thickness@{thick_file}",
+            # NOTE: If your SBSAR uses a different identifier than "color", change it here!
+            "--set-entry",
+            f"color@{color_file}",
         ]
 
         try:
@@ -323,7 +326,7 @@ def run_pipeline(
             # --- HOUSEKEEPING ---
             if cleanup_temps:
                 log_callback("  -> [Phase 3] Cleaning up temp maps...")
-                for temp_file in [ao_file, curv_file, thick_file]:
+                for temp_file in [ao_file, curv_file, thick_file, color_file]:
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
 
