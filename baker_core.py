@@ -154,6 +154,36 @@ BASE_JSON = {
                 "use_lowdef_as_highdef": "Value from CommonProjection/use_lowdef_as_highdef",
             },
         },
+        {
+            "baker": "Color.Raytraced",
+            "identifier": "color",
+            "parameters": {
+                "base.uv_set": "Value from Common/base.uv_set",
+                "cage_scene_path": "Value from CommonProjection/cage_scene_path",
+                "color_generator": "grayscale",
+                "color_source": "mesh_index",
+                "high_scene_paths": "Value from CommonProjection/high_scene_paths",
+                "is_selected": True,
+                "output_format": "Value from Common/output_format",
+                "output_name": "Value from Common/output_name",
+                "output_size": "Value from Common/output_size",
+                "projection.cull_backfaces": "Value from CommonProjection/cull_backfaces",
+                "projection.hit_strategy": "Value from CommonProjection/hit_strategy",
+                "projection.max_depth": "Value from CommonProjection/max_depth",
+                "projection.max_height": "Value from CommonProjection/max_height",
+                "projection.mesh_match_mode": "match_mesh_name",
+                "projection.normalized_distance": "Value from CommonProjection/normalized_distance",
+                "projection.offset_map_path": "Value from CommonProjection/offset_map_path",
+                "projection.sampling_rate": "Value from CommonProjection/sampling_rate",
+                "projection.skew_map_invert": "Value from CommonProjection/skew_map_invert",
+                "projection.skew_map_path": "Value from CommonProjection/skew_map_path",
+                "projection.smooth_normals": "Value from CommonProjection/smooth_normals",
+                "selected_meshes": "Value from Common/selected_meshes",
+                "skew_correction": "Value from CommonProjection/skew_correction",
+                "use_cage": "Value from CommonProjection/use_cage",
+                "use_lowdef_as_highdef": "Value from CommonProjection/use_lowdef_as_highdef",
+            },
+        },
     ],
     "enable_mip_diffusion": True,
     "low_scene_path": "",
@@ -257,6 +287,8 @@ def run_pipeline(
         ao_file = os.path.join(output_dir, f"{mesh_base}_ambient_occlusion.{out_format}")
         curv_file = os.path.join(output_dir, f"{mesh_base}_curvature.{out_format}")
         thick_file = os.path.join(output_dir, f"{mesh_base}_thickness.{out_format}")
+        color_file = os.path.join(output_dir, f"{mesh_base}_color.{out_format}")
+
         if not all(os.path.exists(f) for f in [ao_file, curv_file, thick_file]):
             log_callback(f"  [!] Missing baked textures! Skipping packing for {mesh_base}.")
             continue
