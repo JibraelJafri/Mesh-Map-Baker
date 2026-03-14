@@ -325,7 +325,7 @@ def run_pipeline(
 
             # --- HOUSEKEEPING ---
             if cleanup_temps:
-                log_callback("  -> [Phase 3] Cleaning up temp files...")
+                log_callback("  -> [Phase 3] Cleaning up temp maps...")
                 for temp_file in [ao_file, curv_file, thick_file, color_file]:
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
