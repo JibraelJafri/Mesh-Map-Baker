@@ -6,11 +6,12 @@ import glob
 import baker_core
 
 
+# AutoBakerApp Application Class
 class AutoBakerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Substance 3D Auto-Baker & Packer (Pro)")
-        self.root.geometry("680x700+50+50")
+        self.root.geometry("680x700")
         self.root.resizable(False, False)
 
         # Check Executables
