@@ -71,7 +71,7 @@ BASE_JSON = {
                 "secondary.max_distance": 1,
                 "secondary.mesh_match_mode": "match_all",
                 "secondary.min_distance": 0.00001,
-                "secondary.normalized_distance": False,
+                "secondary.normalized_distance": True,
                 "secondary.sample_count": 256,
                 "secondary.sample_distribution": "cosine",
                 "secondary.spread_angle": 180,
@@ -108,7 +108,7 @@ BASE_JSON = {
                 "projection.skew_map_path": "Value from CommonProjection/skew_map_path",
                 "projection.smooth_normals": "Value from CommonProjection/smooth_normals",
                 "secondary.mesh_match_mode": "match_all",
-                "secondary.normalized_distance": False,
+                "secondary.normalized_distance": True,
                 "secondary.sample_count": 256,
                 "secondary.sampling_radius": 0.001,
                 "selected_meshes": "Value from Common/selected_meshes",
@@ -144,7 +144,7 @@ BASE_JSON = {
                 "secondary.max_distance": 0.1,
                 "secondary.mesh_match_mode": "match_all",
                 "secondary.min_distance": 0.00001,
-                "secondary.normalized_distance": False,
+                "secondary.normalized_distance": True,
                 "secondary.sample_count": 256,
                 "secondary.sample_distribution": "cosine",
                 "secondary.spread_angle": 180,
@@ -325,7 +325,7 @@ def run_pipeline(
 
             # --- HOUSEKEEPING ---
             if cleanup_temps:
-                log_callback("  -> [Phase 3] Cleaning up temp maps...")
+                log_callback("  -> [Phase 3] Cleaning up temp files...")
                 for temp_file in [ao_file, curv_file, thick_file, color_file]:
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
