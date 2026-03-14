@@ -6,7 +6,6 @@ import glob
 import baker_core
 
 
-# AutoBakerApp Application Class
 class AutoBakerApp:
     def __init__(self, root):
         self.root = root
